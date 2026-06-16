@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>东莞城市学院 · 图书馆座位预约系统</title>
+<style>
+/* ========== Reset & Variables ========== */
+:root {
+  --brand: #0d7c3e;
+  --brand-light: #16a34a;
+  --brand-dark: #065f2e;
+  --brand-pale: #ecfdf5;
+  --brand-bg: #f0fdf6;
+  --accent: #c9a84c;
+  --seat-avail: #22c55e;
+  --seat-avail-hover: #16a34a;
+  --seat-sel: #ef4444;
+  --seat-away: #f59e0b;
+  --bg: #f1f5f9;
+  --card: #fff;
+  --text: #1e293b;
+  --text-sec: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgba(0,0,0,.07);
+  --shadow-md: 0 4px 12px rgba(0,0,0,.08);
+  --radius: 10px;
+  --radius-sm: 6px;
+  --t: 0.18s ease;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg); color: var(--text); min-height: 100vh; line-height: 1.6;
+}
+
+/* ========== Header ========== */
+.header{
+  background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 50%, var(--brand-light) 100%);
+  color: #fff; position: sticky; top: 0; z-index: 100;
+  box-shadow: 0 2px 16px rgba(13,124,62,.3);
+}
+.header-inner{
+  max-width: 1300px; margin: 0 auto; display: flex; align-items: center;
+  justify-content: space-between; padding: 10px 28px;
+}
+.header-brand{ display: flex; align-items: center; gap: 14px; }
+.header-logo{
+  width: 48px; height: 48px; border-radius: 50%; flex-shrink: 0;
+  background: rgba(255,255,255,.18); display: flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; border: 2.5px solid rgba(255,255,255,.4);
+  position: relative;
+}
+.header-logo .ring{ position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid rgba(255,255,255,.25); }
+.header-title h1{ font-size: 19px; font-weight: 700; letter-spacing: 1px; }
+.header-title .sub{ font-size: 11px; opacity: .78; display: block; margin-top: 2px; }
+.header-title .motto{ font-size: 10px; opacity: .6; margin-top: 1px; letter-spacing: 2px; }
+.header-info{ display: flex; align-items: center; gap: 16px; font-size: 12px; }
+.header-info .time{ opacity: .9; font-variant-numeric: tabular-nums; }
+.header-info .badge{ background: rgba(255,255,255,.14); padding: 5px 14px; border-radius: 20px; font-size: 11px; }
+.header-login-btn{ background: rgba(255,255,255,.2); color: #fff; border: 1px solid rgba(255,255,255,.3); padding: 5px 16px; border-radius: 20px; font-size: 12px; cursor: pointer; font-weight: 600; transition: all var(--t); }
+.header-login-btn:hover{ background: rgba(255,255,255,.3); }
+.header-user{ display: flex; align-items: center; gap: 10px; font-size: 12px; color: #fff; }
+.header-user .avatar{ width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,.2); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+.header-user .logout-btn{ background: none; border: 1px solid rgba(255,255,255,.3); color: #fff; padding: 3px 12px; border-radius: 12px; font-size: 11px; cursor: pointer; transition: all var(--t); }
+.header-user .logout-btn:hover{ background: rgba(255,255,255,.2); }
+
+/* ========== Main Layout ========== */
+.main-container{
+  max-width: 1300px; margin: 0 auto; padding: 16px 24px 40px;
+  display: grid; grid-template-columns: 1fr 300px; gap: 16px;
+}
+
+/* ========== Floor Tabs ========== */
+.floor-tabs{
+  grid-column: 1/-1; display: flex; gap: 4px; flex-wrap: wrap;
+  background: var(--card); border-radius: var(--radius); padding: 5px; box-shadow: var(--shadow);
+}
+.floor-tab{
+  flex: 1; min-width: 90px; padding: 11px 12px; border: none; background: transparent;
+  border-radius: 7px; cursor: pointer; font-size: 13px; font-weight: 600;
+  color: var(--text-sec); transition: all var(--t); text-align: center; white-space: nowrap;
+}
+.floor-tab:hover{ background: var(--brand-pale); color: var(--brand); }
+.floor-tab.active{ background: var(--brand); color: #fff; }
+.floor-tab .fn{ display: block; font-size: 10px; opacity: .7; margin-top: 2px; font-weight: 400; }
+
+/* ========== Stats Bar ========== */
+.stats-bar{ grid-column: 1/-1; display: flex; gap: 10px; flex-wrap: wrap; }
+.stat-item{
+  flex: 1; min-width: 70px; background: var(--card); border-radius: var(--radius-sm);
+  padding: 10px 14px; text-align: center; box-shadow: var(--shadow);
+}
+.stat-item .num{ font-size: 20px; font-weight: 700; }
+.stat-item .num.green{ color: var(--seat-avail); }
+.stat-item .num.red{ color: var(--seat-sel); }
+.stat-item .num.yellow{ color: var(--seat-away); }
+.stat-item .lbl{ font-size: 10px; color: var(--text-sec); margin-top: 1px; }
+.stat-item .num.brand{ color: var(--brand); }
+
+/* ========== Seat Map ========== */
+.seat-map-card{
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow-md); padding: 20px; min-height: 500px;
+}
+.floor-header{
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 14px; border-bottom: 2px solid var(--brand-pale);
+}
+.floor-header h2{ font-size: 17px; font-weight: 700; color: var(--brand); }
+.floor-header .fd{ font-size: 12px; color: var(--text-sec); }
+
+.zones-wrap{
+  display: flex; flex-wrap: wrap; gap: 14px;
+}
+.zone-card{
+  background: #fafcfb; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 12px; min-width: 200px;
+}
+.zone-card.highlight{ border-color: #bbf7d0; background: #fafffb; }
+.zone-label{
+  font-size: 12px; font-weight: 700; color: var(--brand); margin-bottom: 10px;
+  padding: 3px 10px; background: var(--brand-pale); border-radius: 3px;
+  display: inline-block; letter-spacing: 0.5px;
+}
+.zone-seats{ display: grid; gap: 5px; justify-items: center; }
+.seat{
+  width: 36px; height: 30px; border-radius: 3px; display: flex; align-items: center;
+  justify-content: center; font-size: 9px; font-weight: 600; cursor: pointer;
+  transition: all var(--t); border: 1.5px solid transparent; user-select: none; position: relative;
+}
+.seat.available{ background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+.seat.available:hover{ background: var(--seat-avail); color: #fff; border-color: var(--seat-avail); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(34,197,94,.3); }
+.seat.selected{ background: #fecaca; color: #991b1b; border-color: #fca5a5; cursor: pointer; }
+.seat.selected:hover{ background: var(--seat-sel); color: #fff; border-color: var(--seat-sel); transform: translateY(-1px); box-shadow: 0 3px 8px rgba(239,68,68,.3); }
+.seat.selected.mine{ border-color: #f87171; border-width: 2px; box-shadow: 0 0 0 2px rgba(239,68,68,.2); }
+.seat.selected.mine::after{
+  content: "我"; position: absolute; top: -7px; right: -5px; background: #ef4444; color: #fff;
+  font-size: 8px; width: 16px; height: 16px; border-radius: 50%; display: flex;
+  align-items: center; justify-content: center; font-weight: 700; line-height: 1;
+}
+.seat.power::before{ content: "⚡"; position: absolute; top: -5px; left: -3px; color: #f59e0b; font-size: 10px; line-height: 1; z-index: 2; }
+.seat.away{ background: #fef3c7; color: #92400e; border-color: #fde68a; cursor: not-allowed; }
+.seat.away:hover{ background: #fde68a; }
+
+/* ========== Sidebar ========== */
+.sidebar{ display: flex; flex-direction: column; gap: 14px; }
+.info-card{ background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+.info-card h3{ font-size: 14px; font-weight: 700; color: var(--brand); margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid var(--brand-pale); }
+.legend{ display: flex; flex-direction: column; gap: 8px; }
+.legend-item{ display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-sec); }
+.legend-dot{ width: 18px; height: 18px; border-radius: 3px; flex-shrink: 0; }
+.legend-dot.available{ background: #dcfce7; border: 1.5px solid #bbf7d0; }
+.legend-dot.selected{ background: #fecaca; border: 1.5px solid #fca5a5; }
+.legend-dot.away{ background: #fef3c7; border: 1.5px solid #fde68a; }
+.legend-dot.power{ background: #fef9c3; border: 1.5px solid #facc15; position: relative; }
+.legend-dot.power::after{ content: "⚡"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 9px; }
+.my-seat-info{ min-height: 70px; display: flex; align-items: center; justify-content: center; }
+.my-seat-info .empty{ color: var(--text-sec); font-size: 12px; text-align: center; }
+.seat-detail{ display: flex; flex-direction: column; gap: 6px; font-size: 12px; width: 100%; }
+.seat-detail .r{ display: flex; justify-content: space-between; align-items: center; }
+.seat-detail .lbl{ color: var(--text-sec); }
+.seat-detail .val{ font-weight: 700; color: var(--brand); }
+.seat-badge{ display: inline-block; background: var(--brand); color: #fff; padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+.btn-release{
+  display: block; width: 100%; margin-top: 8px; padding: 8px; border: 2px solid var(--seat-sel);
+  background: #fff; color: var(--seat-sel); border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.btn-release:hover{ background: var(--seat-sel); color: #fff; }
+.btn-clockin{
+  display: block; width: 100%; margin-top: 8px; padding: 8px; border: 2px solid #f59e0b;
+  background: #fff; color: #f59e0b; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.btn-clockin:hover{ background: #f59e0b; color: #fff; }
+.away-countdown{
+  display: block; width: 100%; margin-top: 8px; padding: 8px; border: 2px solid #f59e0b;
+  background: #fffbeb; color: #92400e; border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 600; text-align: center; box-sizing: border-box;
+}
+.modal-btn.away{ background: #f59e0b; color: #fff; border-color: #f59e0b; }
+.modal-btn.away:hover{ opacity: .9; }
+.btn-actions{ display: flex; gap: 8px; margin-top: 8px; }
+.btn-actions .btn-release,
+.btn-actions .btn-clockin{ flex: 1; margin-top: 0; }
+.btn-return{
+  display: block; width: 100%; margin-top: 8px; padding: 8px; border: 2px solid var(--seat-return);
+  background: #fff; color: var(--seat-return); border-radius: var(--radius-sm); font-size: 13px;
+  font-weight: 600; cursor: pointer; transition: all var(--t);
+}
+.btn-return:hover{ background: var(--seat-return); color: #fff; }
+.btn-actions .btn-return,
+.btn-actions .btn-away-act{ flex: 1; margin-top: 0; padding: 8px; border: 2px solid var(--seat-away, #f59e0b); border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; transition: all var(--t); }
+.btn-actions .btn-away-act{ background: #fff; color: #f59e0b; border-color: #f59e0b; }
+.btn-actions .btn-away-act:hover{ background: #f59e0b; color: #fff; }
+.btn-actions .btn-away-act:disabled{ background: #eee; color: #999; border-color: #ddd; cursor: not-allowed; }
+.btn-actions .btn-return{ background: #fff; color: var(--seat-return); border-color: var(--seat-return); }
+.btn-actions .btn-return:hover{ background: var(--seat-return); color: #fff; }
+.btn-actions .away-countdown{ flex: 1.4; margin-top: 0; padding: 8px; border: 2px solid #f59e0b; background: #fffbeb; color: #92400e; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; text-align: center; box-sizing: border-box; }
+.rules-list{ font-size: 11px; color: var(--text-sec); padding-left: 14px; }
+.rules-list li{ margin-bottom: 4px; }
+.open-time{ font-size: 11px; color: var(--text-sec); text-align: center; margin-top: 6px; }
+
+/* ========== Modal ========== */
+.modal-overlay{ display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 200; align-items: center; justify-content: center; }
+.modal-overlay.show{ display: flex; animation: fadeIn .15s; }
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+.modal{
+  background: #fff; border-radius: 14px; padding: 26px 30px; width: 370px; max-width: 92vw;
+  box-shadow: 0 12px 30px rgba(0,0,0,.15); animation: slideUp .2s;
+}
+@keyframes slideUp{ from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-icon{ width: 48px; height: 48px; border-radius: 50%; margin: 0 auto 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; }
+.modal-icon.confirm{ background: var(--brand-pale); color: var(--brand); }
+.modal-icon.warn{ background: #fee2e2; color: var(--seat-sel); }
+.modal h3{ text-align: center; font-size: 16px; margin-bottom: 6px; }
+.modal .modal-desc{ text-align: center; font-size: 12px; color: var(--text-sec); margin-bottom: 18px; }
+.modal .modal-seat-info{ background: #f8fafc; border-radius: 8px; padding: 10px 14px; margin-bottom: 18px; display: flex; justify-content: center; gap: 16px; font-size: 12px; flex-wrap: wrap; }
+.modal .modal-seat-info span{ color: var(--text-sec); }
+.modal .modal-seat-info strong{ color: var(--brand); }
+.modal-actions{ display: flex; gap: 10px; }
+.modal-btn{ flex: 1; padding: 9px; border-radius: var(--radius-sm); font-size: 13px; font-weight: 600; cursor: pointer; border: 2px solid var(--border); background: #fff; color: var(--text-sec); transition: all var(--t); }
+.modal-btn:hover{ background: #f8fafc; }
+.modal-btn.primary{ background: var(--brand); color: #fff; border-color: var(--brand); }
+.modal-btn.primary:hover{ background: var(--brand-light); }
+.modal-btn.danger{ background: var(--seat-sel); color: #fff; border-color: var(--seat-sel); }
+.modal-btn.danger:hover{ opacity: .9; }
+
+/* ========== Login Form ========== */
+.login-form{ margin-bottom: 16px; }
+.login-field{ margin-bottom: 12px; }
+.login-field label{ display: block; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-bottom: 4px; }
+.login-field input{ width: 100%; padding: 8px 12px; border: 1.5px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; box-sizing: border-box; transition: border-color var(--t); }
+.login-field input:focus{ border-color: var(--brand); }
+.login-error{ font-size: 11px; color: var(--seat-sel); text-align: center; min-height: 16px; margin: 4px 0; }
+
+/* ========== Toast ========== */
+.toast{
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  background: #1e293b; color: #fff; padding: 10px 22px; border-radius: 20px;
+  font-size: 12px; z-index: 300; pointer-events: none;
+  animation: toastIn .3s, toastOut .3s 2s forwards;
+}
+@keyframes toastIn{ from{opacity:0;transform:translateX(-50%) translateY(-8px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
+@keyframes toastOut{ from{opacity:1} to{opacity:0} }
+
+/* ========== Responsive ========== */
+@media(max-width:960px){
+  .main-container{ grid-template-columns: 1fr; }
+  .sidebar{ order: -1; flex-direction: row; flex-wrap: wrap; gap: 10px; }
+  .sidebar .info-card{ flex: 1; min-width: 180px; }
+  .seat{ width: 30px; height: 26px; font-size: 8px; }
+  .zone-seats{ gap: 3px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ======== Header ======== -->
+<header class="header">
+  <div class="header-inner">
+    <div class="header-brand">
+      <div class="header-logo"><span class="ring"></span>城</div>
+      <div class="header-title">
+        <h1>东莞城市学院图书馆</h1>
+        <span class="sub">Dongguan City University Library · 座位预约系统</span>
+        <span class="motto">厚德务实 · 知行合一</span>
+      </div>
+    </div>
+    <div class="header-info" id="headerInfo">
+      <span class="time" id="liveTime">--</span>
+      <span class="badge">开馆 08:30 - 23:00</span>
+    </div>
+  </div>
+</header>
+
+<!-- ======== Main ======== -->
+<div class="main-container">
+  <div class="floor-tabs" id="floorTabs"></div>
+  <div class="stats-bar" id="statsBar"></div>
+
+  <!-- Seat Map -->
+  <div class="seat-map-card" id="seatMapCard">
+    <div class="floor-header">
+      <div><h2 id="floorTitle">1F · 机房</h2><p class="fd" id="floorDesc"></p></div>
+    </div>
+    <div class="zones-wrap" id="zonesWrap"></div>
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="info-card"><h3>图例说明</h3>
+      <div class="legend">
+        <div class="legend-item"><span class="legend-dot available"></span> 可选座位</div>
+        <div class="legend-item"><span class="legend-dot selected"></span> 已被占用</div>
+        <div class="legend-item"><span class="legend-dot away"></span> 暂离（保留中）</div>
+        <div class="legend-item"><span class="legend-dot power"></span> 有电源</div>
+      </div>
+    </div>
+    <div class="info-card"><h3>我的座位</h3><div class="my-seat-info" id="mySeatInfo"><div class="empty">暂未选座</div></div></div>
+    <div class="info-card"><h3>快捷操作</h3><div class="my-seat-info" id="quickActions"><div class="empty">请先选座</div></div></div>
+    <div class="info-card"><h3>使用规则</h3>
+      <ul class="rules-list">
+        <li>每人限选 1 座，全馆通用</li><li>选座后 30 分钟内签到</li>
+        <li>暂离保留 45 分钟</li><li>离馆前请及时退座</li>
+        <li>总阅览座位 2300+ 个</li>
+      </ul><p class="open-time">东莞城市学院图书馆 © 2026<br>东莞市寮步镇文昌路1号</p>
+    </div>
+  </aside>
+</div>
+
+<!-- ======== Modal: Select ======== -->
+<div class="modal-overlay" id="modalSelect">
+  <div class="modal">
+    <div class="modal-icon confirm">&#128214;</div><h3>确认选座</h3>
+    <p class="modal-desc">请在 30 分钟内到馆签到</p>
+    <div class="modal-seat-info" id="modalSelectInfo"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal('modalSelect')">取消</button>
+      <button class="modal-btn primary" id="btnConfirmSelect">确认</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== Modal: Release ======== -->
+<div class="modal-overlay" id="modalRelease">
+  <div class="modal">
+    <div class="modal-icon warn">&#10007;</div><h3>确认退座</h3>
+    <p class="modal-desc">退座后释放给其他同学</p>
+    <div class="modal-seat-info" id="modalReleaseInfo"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal('modalRelease')">取消</button>
+      <button class="modal-btn danger" id="btnConfirmRelease">确认退座</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== Modal: Clock In ======== -->
+<div class="modal-overlay" id="modalClockIn">
+  <div class="modal">
+    <div class="modal-icon confirm">&#9200;</div><h3>打卡签到</h3>
+    <p class="modal-desc">确认已到达座位就座？</p>
+    <div class="modal-seat-info" id="modalClockInInfo"></div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal('modalClockIn')">取消</button>
+      <button class="modal-btn primary" id="btnConfirmClockIn">确认打卡</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======== Modal: Login ======== -->
+<div class="modal-overlay" id="modalLogin">
+  <div class="modal">
+    <div class="modal-icon confirm">&#128100;</div><h3>用户登录</h3>
+    <p class="modal-desc">请使用学号登录图书馆座位预约系统</p>
+    <div class="login-form">
+      <div class="login-field"><label>学号</label><input type="text" id="loginId" placeholder="请输入学号" autocomplete="off"></div>
+      <div class="login-field"><label>密码</label><input type="password" id="loginPwd" placeholder="请输入密码"></div>
+      <p class="login-error" id="loginError"></p>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn" onclick="closeModal('modalLogin')">取消</button>
+      <button class="modal-btn primary" id="btnLogin">登录</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastContainer"></div>
+
+<script>
+/* ================================================================
+   东莞城市学院 · 图书馆座位选座系统
+   真实布局 | 绿色品牌色 | 4层约1150+模拟座位
+   ================================================================ */
+
+// ---- Floor zone definitions ----
+const floorZones = {
+  1: {
+    name: '1F · 机房',
+    desc: '学院实验机房，联网电脑 1000 余台，自助上机学习',
+    zones: [
+      { label: '机房 A 区', cols: 10, rows: 5, short: '机A' },
+      { label: '机房 B 区', cols: 10, rows: 5, short: '机B' },
+      { label: '机房 C 区', cols: 10, rows: 5, short: '机C' },
+    ]
+  },
+  2: {
+    name: '2F · 大厅服务区',
+    desc: '总出入口、总服务台、自助服务区、展览区、检索区、报刊阅览区',
+    zones: [
+      { label: '报刊阅览区', cols: 8, rows: 8, short: '报刊' },
+      { label: '检索区', cols: 8, rows: 4, short: '检索' },
+      { label: '展览休息区', cols: 8, rows: 4, short: '展览' },
+    ]
+  },
+  3: {
+    name: '3F · 社科阅览区',
+    desc: '社会科学书库（大书库+小书库），语言学、历史文学类，中厅自习区',
+    zones: [
+      { label: '社科大书库 A 区', cols: 10, rows: 7, short: '社A' },
+      { label: '社科小书库 B 区', cols: 9, rows: 6, short: '社B' },
+      { label: '中厅自习区 A', cols: 10, rows: 8, short: '中A', highlight: true },
+      { label: '中厅自习区 B', cols: 10, rows: 8, short: '中B', highlight: true },
+      { label: '中厅自习区 C', cols: 9, rows: 6, short: '中C', highlight: true },
+    ]
+  },
+  4: {
+    name: '4F · 自科阅览区',
+    desc: '自然科学书库，中厅自习区（座位最多），各阅览书库',
+    zones: [
+      { label: '自科书库 A 区', cols: 10, rows: 6, short: '自A' },
+      { label: '自科书库 B 区', cols: 10, rows: 6, short: '自B' },
+      { label: '中厅自习区 A', cols: 10, rows: 8, short: '中A', highlight: true },
+      { label: '中厅自习区 B', cols: 10, rows: 8, short: '中B', highlight: true },
+      { label: '中厅自习区 C', cols: 10, rows: 7, short: '中C', highlight: true },
+    ]
+  }
+};
+
+// ---- Build seat data ----
+function buildFloorSeats(f) {
+  const cfg = floorZones[f];
+  const seats = [];
+  cfg.zones.forEach(z => {
+    for (let r = 0; r < z.rows; r++) {
+      for (let c = 0; c < z.cols; c++) {
+        const num = String(r * z.cols + c + 1).padStart(2, '0');
+        seats.push({
+          id: `${f}F-${z.short}-${num}`,
+          floor: f,
+          zoneLabel: z.label,
+          zoneShort: z.short,
+          highlight: !!z.highlight,
+          row: r, col: c,
+          cols: z.cols,
+          label: num,
+          status: 'available'
+        });
+      }
+    }
+  });
+  return seats;
+}
+
+// Deterministic hash
+function hashStr(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) { h = ((h << 5) - h) + s.charCodeAt(i); h |= 0; }
+  return Math.abs(h);
+}
+
+// ---- Init all floors ----
+const allFloors = {};
+for (let f = 1; f <= 4; f++) {
+  const seats = buildFloorSeats(f);
+  seats.forEach(s => {
+    const h = hashStr(s.id);
+    const v = h % 100;
+    if (v < 5) s.status = 'away';        // ~5% away
+    else if (v < 20) s.status = 'selected'; // ~15% pre-occupied
+  });
+  allFloors[f] = seats;
+
+  // Power seats: deterministic random for自习区 (3F/4F, zoneShort starts with "中")
+  if (f === 3 || f === 4) {
+    seats.forEach(s => { s.power = false; });
+    const zoneGroups = {};
+    seats.forEach(s => {
+      if (s.zoneShort.startsWith('中')) {
+        if (!zoneGroups[s.zoneShort]) zoneGroups[s.zoneShort] = [];
+        zoneGroups[s.zoneShort].push(s);
+      }
+    });
+    for (const [zone, zoneSeats] of Object.entries(zoneGroups)) {
+      const h = hashStr(zone + '_power');
+      const count = 6 + (h % 5); // 6-10
+      const indexed = zoneSeats.map((s, i) => ({ s, idx: i }));
+      indexed.sort((a, b) => (hashStr(zone + a.idx) % 1000) - (hashStr(zone + b.idx) % 1000));
+      for (let i = 0; i < Math.min(count, indexed.length); i++) {
+        indexed[i].s.power = true;
+      }
+    }
+  }
+}
+
+// ---- State ----
+let currentFloor = 1;
+let userSeatId = null;
+let pendingSeatId = null;
+let awayEndTime = null;   // Unix timestamp (s) when away expires
+let awayTimer = null;     // interval handle for countdown & auto-release
+let hasCheckedIn = false; // whether user has confirmed arrival
+let awayQuota = 2; // remaining away count for current seat session
+
+// ---- DOM shortcuts ----
+const $ = id => document.getElementById(id);
+const $floorTabs = $('floorTabs');
+const $floorTitle = $('floorTitle');
+const $floorDesc = $('floorDesc');
+const $zonesWrap = $('zonesWrap');
+const $statsBar = $('statsBar');
+const $mySeatInfo = $('mySeatInfo');
+const $modalSelect = $('modalSelect');
+const $modalRelease = $('modalRelease');
+const $modalSelectInfo = $('modalSelectInfo');
+const $modalReleaseInfo = $('modalReleaseInfo');
+const $btnConfirmSelect = $('btnConfirmSelect');
+const $btnConfirmRelease = $('btnConfirmRelease');
+const $liveTime = $('liveTime');
+const $modalLogin = $('modalLogin');
+const $loginId = $('loginId');
+const $loginPwd = $('loginPwd');
+const $loginError = $('loginError');
+const $modalClockIn = $('modalClockIn');
+const $modalClockInInfo = $('modalClockInInfo');
+const $btnConfirmClockIn = $('btnConfirmClockIn');
+const $quickActions = $('quickActions');
+
+// ---- Login State ----
+const TEST_ACCOUNTS = [
+  { id: '202342040115', pwd: '123456', name: '罗梓茵' },
+  { id: '20244202406002', pwd: '123456', name: '陈景贤' },
+  { id: '20244202406004', pwd: '123456', name: '陈欣乐' },
+  { id: '20244202406007', pwd: '123456', name: '陈昭乐' },
+  { id: '20244202406008', pwd: '123456', name: '陈昭怡' },
+  { id: '20244202406009', pwd: '123456', name: '方惠敏' },
+  { id: '20244202406010', pwd: '123456', name: '何瑞盈' },
+  { id: '20244202406011', pwd: '123456', name: '杨梓彤' },
+  { id: '20244202406012', pwd: '123456', name: '黄培琪' },
+  { id: '20244202406013', pwd: '123456', name: '黄碧婵' },
+  { id: '20244202406015', pwd: '123456', name: '纪彩婷' },
+  { id: '20244202406016', pwd: '123456', name: '金梓丹' },
+  { id: '20244202406017', pwd: '123456', name: '劳嘉盈' },
+  { id: '20244202406018', pwd: '123456', name: '李碧聪' },
+  { id: '20244202406019', pwd: '123456', name: '李健婷' },
+  { id: '20244202406020', pwd: '123456', name: '李诗韵' },
+  { id: '20244202406021', pwd: '123456', name: '李凯泳' },
+  { id: '20244202406022', pwd: '123456', name: '李燕玲' },
+  { id: '20244202406023', pwd: '123456', name: '连秀芬' },
+  { id: '20244202406024', pwd: '123456', name: '凌家豪' },
+  { id: '20244202406025', pwd: '123456', name: '林惠珍' },
+  { id: '20244202406026', pwd: '123456', name: '林蝶瑛' },
+  { id: '20244202406027', pwd: '123456', name: '骆绮妍' },
+  { id: '20244202406028', pwd: '123456', name: '廖芷钰' },
+  { id: '20244202406029', pwd: '123456', name: '倪志旺' },
+  { id: '20244202406029_2', pwd: '123456', name: '欧阳柳' },
+  { id: '20244202406030', pwd: '123456', name: '区建锋' },
+  { id: '20244202406031', pwd: '123456', name: '汪慧轩' },
+  { id: '20244202406033', pwd: '123456', name: '谭思乐' },
+  { id: '20244202406034', pwd: '123456', name: '蔡思琦' },
+  { id: '20244202406034_2', pwd: '123456', name: '涂慧怡' },
+  { id: '20244202406035', pwd: '123456', name: '王佳音' },
+  { id: '20244202406036', pwd: '123456', name: '吴加如' },
+  { id: '20244202406037', pwd: '123456', name: '吴颖琪' },
+  { id: '20244202406038', pwd: '123456', name: '夏江涵' },
+  { id: '20244202406039', pwd: '123456', name: '幸朗岚' },
+  { id: '20244202406040', pwd: '123456', name: '许朗' },
+  { id: '20244202406042', pwd: '123456', name: '杨铭秀' },
+  { id: '20244202406043', pwd: '123456', name: '杨允' },
+  { id: '20244202406044', pwd: '123456', name: '杨之艺' },
+  { id: '20244202406045', pwd: '123456', name: '于玲' },
+  { id: '20244202406046', pwd: '123456', name: '袁慧乐' },
+  { id: '20244202406046_2', pwd: '123456', name: '蓝雨彤' },
+  { id: '20244202406047', pwd: '123456', name: '钟雪' },
+  { id: '20244202406048', pwd: '123456', name: '周颖欣' },
+  { id: '20244202406049', pwd: '123456', name: '虞雨涵' },
+  { id: '202442040101', pwd: '123456', name: '白崇景' },
+  { id: '202442040102', pwd: '123456', name: '曾东妮' },
+  { id: '202442040103', pwd: '123456', name: '陈家茵' },
+  { id: '202442040104', pwd: '123456', name: '陈培英' },
+  { id: '202442040105', pwd: '123456', name: '陈屏而' },
+  { id: '202442040107', pwd: '123456', name: '陈颂然' },
+  { id: '202442040108', pwd: '123456', name: '陈曦' },
+  { id: '202442040109', pwd: '123456', name: '方贵祖' },
+  { id: '202442040110', pwd: '123456', name: '何玲嘉' },
+  { id: '202442040111', pwd: '123456', name: '胡舒怡' },
+  { id: '202442040112', pwd: '123456', name: '黄朝源' },
+  { id: '202442040113', pwd: '123456', name: '黄媚琪' },
+  { id: '202442040115', pwd: '123456', name: '纪翠柳' },
+  { id: '202442040116', pwd: '123456', name: '金慧伶' },
+  { id: '202442040117', pwd: '123456', name: '劳彩盈' },
+  { id: '202442040118', pwd: '123456', name: '李惠敏' },
+  { id: '202442040119', pwd: '123456', name: '李楠' },
+  { id: '202442040120', pwd: '123456', name: '李诗雨' },
+  { id: '202442040121', pwd: '123456', name: '零里法' },
+  { id: '202442040122', pwd: '123456', name: '李怡' },
+  { id: '202442040123', pwd: '123456', name: '连东茗' },
+  { id: '202442040124', pwd: '123456', name: '梁家睿' },
+  { id: '202442040125', pwd: '123456', name: '林嘉辉' },
+  { id: '202442040126', pwd: '123456', name: '林锦辉' },
+  { id: '202442040127', pwd: '123456', name: '骆妍妍' },
+  { id: '202442040128', pwd: '123456', name: '倪志辉' },
+  { id: '202442040129', pwd: '123456', name: '欧彦桦' },
+  { id: '202442040131', pwd: '123456', name: '沈智轩' },
+  { id: '202442040132', pwd: '123456', name: '覃远锋' },
+  { id: '202442040133', pwd: '123456', name: '谭嘉乐' },
+  { id: '202442040134', pwd: '123456', name: '涂宏锦' },
+  { id: '202442040135', pwd: '123456', name: '王佳音' },
+  { id: '202442040136', pwd: '123456', name: '韦婧如' },
+  { id: '202442040137', pwd: '123456', name: '吴振豪' },
+  { id: '202442040138', pwd: '123456', name: '吴芷妮' },
+  { id: '202442040139', pwd: '123456', name: '幸栖凤' },
+  { id: '202442040140', pwd: '123456', name: '许彬' },
+  { id: '202442040142', pwd: '123456', name: '杨瀚书' },
+  { id: '202442040143', pwd: '123456', name: '杨乐儿' },
+  { id: '202442040144', pwd: '123456', name: '杨文杰' },
+  { id: '202442040145', pwd: '123456', name: '于帅' },
+  { id: '202442040146', pwd: '123456', name: '招志聪' },
+  { id: '202442040147', pwd: '123456', name: '钟蕾' },
+  { id: '202442040148', pwd: '123456', name: '周耕涵' },
+  { id: '202442040149', pwd: '123456', name: '周锦涛' },
+  { id: '20244302406001', pwd: '123456', name: '白晨睿' },
+];
+let currentUser = null;
+(function(){
+  const saved = localStorage.getItem('dcu_lib_user');
+  if (saved) { try { currentUser = JSON.parse(saved); } catch(e){} }
+})();
+
+function renderHeader() {
+  const $hi = $('headerInfo');
+  if (!document.getElementById('liveTime')) render();
+  const timeHtml = '<span class="time" id="liveTime">' + new Date().toLocaleString('zh-CN',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}) + '</span>';
+  const badgeHtml = '<span class="badge">开馆 08:30 - 23:00</span>';
+  if (currentUser) {
+    $hi.innerHTML = timeHtml + badgeHtml + '<div class="header-user"><div class="avatar">' + currentUser.name[0] + '</div><span>已登录：' + currentUser.name + '同学</span><button class="logout-btn" onclick="doLogout()">退出</button></div>';
+  } else {
+    $hi.innerHTML = timeHtml + badgeHtml + '<button class="header-login-btn" onclick="openLogin()">登录</button>';
+  }
+}
+
+function openLogin() {
+  $loginId.value = ''; $loginPwd.value = ''; $loginError.textContent = '';
+  $modalLogin.classList.add('show');
+  setTimeout(() => $loginId.focus(), 100);
+}
+function doLogin() {
+  const id = $loginId.value.trim(), pwd = $loginPwd.value;
+  const acc = TEST_ACCOUNTS.find(a => a.id === id);
+  if (!acc) { $loginError.textContent = '学号不存在'; return; }
+  if (acc.pwd !== pwd) { $loginError.textContent = '密码错误'; return; }
+  currentUser = { id: acc.id, name: acc.name };
+  localStorage.setItem('dcu_lib_user', JSON.stringify(currentUser));
+  closeModal('modalLogin');
+  toast('欢迎，' + currentUser.name + '同学！');
+  renderHeader(); render();
+}
+function doLogout() {
+  currentUser = null;
+  localStorage.removeItem('dcu_lib_user');
+  clearAwayState();
+  hasCheckedIn = false;
+  localStorage.removeItem('dcu_lib_checked_in');
+  awayQuota = 2;
+  localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  if (userSeatId) { userSeatId = null; toast('已退出登录并释放座位'); }
+  else { toast('已退出登录'); }
+  renderHeader(); render();
+}
+
+// ---- Clock ----
+function tick() {
+  const el = document.getElementById('liveTime');
+  if (el) el.textContent = new Date().toLocaleString('zh-CN', {
+    year:'numeric',month:'2-digit',day:'2-digit',
+    hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false
+  });
+}
+tick(); setInterval(tick, 1000);
+
+// ---- Build Floor Tabs ----
+function buildTabs() {
+  $floorTabs.innerHTML = '';
+  for (let f = 1; f <= 4; f++) {
+    const b = document.createElement('button');
+    b.className = 'floor-tab' + (f === currentFloor ? ' active' : '');
+    const nm = floorZones[f].name;
+    b.innerHTML = `${f}F<span class="fn">${nm.slice(5)}</span>`;
+    b.addEventListener('click', () => { currentFloor = f; refresh(); });
+    $floorTabs.appendChild(b);
+  }
+}
+
+// ---- Effective status ----
+function eff(s) {
+  if (s.id === userSeatId) {
+    return (awayEndTime && awayEndTime > Date.now() / 1000) ? 'away' : 'selected';
+  }
+  return s.status;
+}
+
+// ---- Render entire floor ----
+function render() {
+  buildTabs();
+  const seats = allFloors[currentFloor];
+  const cfg = floorZones[currentFloor];
+  $floorTitle.textContent = cfg.name;
+  $floorDesc.textContent = cfg.desc;
+
+  // Stats
+  let av = 0, sl = 0, aw = 0;
+  seats.forEach(s => { const st = eff(s); if (st === 'available') av++; else if (st === 'selected') sl++; else aw++; });
+  $statsBar.innerHTML = `
+    <div class="stat-item"><div class="num green">${av}</div><div class="lbl">可选</div></div>
+    <div class="stat-item"><div class="num red">${sl}</div><div class="lbl">已占用</div></div>
+    <div class="stat-item"><div class="num yellow">${aw}</div><div class="lbl">暂离</div></div>
+    <div class="stat-item"><div class="num brand">${av+sl+aw}</div><div class="lbl">总座位</div></div>
+  `;
+
+  // Zones
+  const groups = {};
+  cfg.zones.forEach(z => { groups[z.short] = []; });
+  seats.forEach(s => { if (groups[s.zoneShort]) groups[s.zoneShort].push(s); });
+
+  let html = '';
+  cfg.zones.forEach(z => {
+    const zs = groups[z.short] || [];
+    html += `<div class="zone-card${z.highlight ? ' highlight' : ''}">`;
+    html += `<div class="zone-label">${z.label}（${zs.length} 座）</div>`;
+    html += `<div class="zone-seats" style="grid-template-columns:repeat(${z.cols},36px)">`;
+    zs.forEach(s => {
+      const st = eff(s);
+      const mine = s.id === userSeatId;
+      let cls = 'seat ' + st;
+      if (st === 'selected' && mine) cls += ' mine';
+      if (s.power) cls += ' power';
+      html += `<div class="${cls}" data-sid="${s.id}" title="${s.id}">${s.label}</div>`;
+    });
+    html += `</div></div>`;
+  });
+  $zonesWrap.innerHTML = html;
+
+  // Delegate clicks via individual listeners (fast enough)
+  $zonesWrap.querySelectorAll('.seat').forEach(el => {
+    el.addEventListener('click', e => { e.stopPropagation(); handleClick(el.dataset.sid); });
+  });
+
+  renderMySeat();
+}
+
+function refresh() { buildTabs(); render(); }
+
+// ---- Find seat across all floors ----
+function findSeat(sid) {
+  for (let f = 1; f <= 4; f++) {
+    const s = allFloors[f].find(x => x.id === sid);
+    if (s) return s;
+  }
+  return null;
+}
+
+// ---- Click handler ----
+function handleClick(sid) {
+  if (!currentUser) { toast('请先登录后再选座'); openLogin(); return; }
+  const seat = findSeat(sid);
+  if (!seat) return;
+  const st = eff(seat);
+  if (st === 'available') {
+    if (userSeatId) { toast('您已选有座位，请先退座再重新选择'); return; }
+    openSelect(seat);
+  } else if (st === 'selected') {
+    if (seat.id === userSeatId) { openRelease(seat); }
+    else { toast('该座位已被其他同学使用'); }
+  } else if (st === 'away') {
+    if (seat.id === userSeatId) { openRelease(seat); }
+    else { toast('该座位使用者暂离中，暂时无法选择'); }
+  }
+}
+
+// ---- Modals ----
+function openSelect(seat) {
+  pendingSeatId = seat.id;
+  $modalSelectInfo.innerHTML = `
+    <span>楼层</span><strong>${seat.floor}F</strong>
+    <span>区域</span><strong>${seat.zoneLabel}</strong>
+    <span>编号</span><strong>${seat.id}</strong>
+  `;
+  $modalSelect.classList.add('show');
+  $btnConfirmSelect.onclick = () => { confirmSelect(); closeModal('modalSelect'); };
+}
+function openRelease(seat) {
+  pendingSeatId = seat.id;
+  $modalReleaseInfo.innerHTML = `
+    <span>楼层</span><strong>${seat.floor}F</strong>
+    <span>区域</span><strong>${seat.zoneLabel}</strong>
+    <span>编号</span><strong>${seat.id}</strong>
+  `;
+  $modalRelease.classList.add('show');
+  $btnConfirmRelease.onclick = () => { confirmRelease(); closeModal('modalRelease'); };
+}
+function closeModal(id) { $(id).classList.remove('show'); pendingSeatId = null; }
+function confirmSelect() {
+  if (!pendingSeatId) return;
+  hasCheckedIn = false;
+  localStorage.removeItem('dcu_lib_checked_in');
+  userSeatId = pendingSeatId;
+  awayQuota = 2;
+  localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  toast('选座成功！请在 30 分钟内到馆签到');
+  render();
+}
+function confirmRelease() {
+  if (!pendingSeatId) return;
+  clearAwayState();
+  hasCheckedIn = false;
+  localStorage.removeItem('dcu_lib_checked_in');
+  userSeatId = null;
+  awayQuota = 2;
+  localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  toast('退座成功，欢迎再次使用');
+  render();
+}
+
+// ---- Clock In / Away / Sign Out ----
+function openClockIn() {
+  const seat = findSeat(userSeatId);
+  if (!seat) return;
+  $modalClockInInfo.innerHTML = `
+    <span>楼层</span><strong>${seat.floor}F</strong>
+    <span>区域</span><strong>${seat.zoneLabel}</strong>
+    <span>编号</span><strong>${seat.id}</strong>
+  `;
+  $modalClockIn.classList.add('show');
+  $btnConfirmClockIn.onclick = () => { doConfirmClockIn(); closeModal('modalClockIn'); };
+}
+function doConfirmClockIn() {
+  if (!userSeatId) return;
+  hasCheckedIn = true;
+  localStorage.setItem('dcu_lib_checked_in', '1');
+  toast('打卡成功！已确认就座');
+  render();
+}
+function doAway() {
+  if (!userSeatId) return;
+  if (awayQuota <= 0) { toast('本时段暂离次数已用完，无法暂离'); return; }
+  if (!confirm('该时间段仅可暂离2次，剩余' + awayQuota + '次，确认暂离？')) return;
+  awayQuota--;
+  localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  awayEndTime = Math.floor(Date.now() / 1000) + 30 * 60; // 30 min
+  localStorage.setItem('dcu_lib_away_end', awayEndTime);
+  startAwayTimer();
+  toast('已设为暂离，30 分钟后自动释放座位');
+  render();
+}
+function doReturn() {
+  if (!userSeatId) return;
+  clearAwayState();
+  toast('已返回座位');
+  render();
+}
+function doSignOut() {
+  if (!userSeatId) return;
+  clearAwayState();
+  hasCheckedIn = false;
+  localStorage.removeItem('dcu_lib_checked_in');
+  userSeatId = null;
+  awayQuota = 2;
+  localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  toast('签退成功，欢迎再次使用');
+  render();
+}
+function clearAwayTimer() {
+  if (awayTimer) { clearInterval(awayTimer); awayTimer = null; }
+}
+function clearAwayState() {
+  clearAwayTimer();
+  awayEndTime = null;
+  localStorage.removeItem('dcu_lib_away_end');
+}
+function startAwayTimer() {
+  clearAwayTimer();
+  awayTimer = setInterval(() => {
+    const now = Date.now() / 1000;
+    if (!awayEndTime || now >= awayEndTime) {
+      // Auto-release
+      hasCheckedIn = false;
+      localStorage.removeItem('dcu_lib_checked_in');
+      userSeatId = null;
+      awayQuota = 2;
+      localStorage.setItem('dcu_lib_away_quota', awayQuota);
+      clearAwayState();
+      toast('暂离超时，座位已自动释放');
+      render();
+      return;
+    }
+    // Refresh countdown display
+    renderMySeat();
+    // Also refresh seat map to keep away state visual
+    if (document.querySelector('.seat.mine.away') || document.querySelector('.seat.mine')) {
+      refreshFloorView();
+    }
+  }, 1000);
+}
+function refreshFloorView() {
+  const seats = allFloors[currentFloor];
+  const $seats = $zonesWrap.querySelectorAll('.seat');
+  $seats.forEach(el => {
+    const sid = el.dataset.sid;
+    const s = seats.find(x => x.id === sid);
+    if (!s) return;
+    const st = eff(s);
+    const mine = s.id === userSeatId;
+    let cls = 'seat ' + st;
+    if (st === 'selected' && mine) cls += ' mine';
+    if (s.power) cls += ' power';
+    el.className = cls;
+  });
+  // Refresh stats
+  let av = 0, sl = 0, aw = 0;
+  seats.forEach(s => { const st = eff(s); if (st === 'available') av++; else if (st === 'selected') sl++; else aw++; });
+  $statsBar.innerHTML = `
+    <div class="stat-item"><div class="num green">${av}</div><div class="lbl">可选</div></div>
+    <div class="stat-item"><div class="num red">${sl}</div><div class="lbl">已占用</div></div>
+    <div class="stat-item"><div class="num yellow">${aw}</div><div class="lbl">暂离</div></div>
+    <div class="stat-item"><div class="num brand">${av+sl+aw}</div><div class="lbl">总座位</div></div>
+  `;
+}
+[$modalSelect, $modalRelease, $modalClockIn, $modalLogin].forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if ($modalSelect.classList.contains('show')) closeModal('modalSelect');
+    if ($modalRelease.classList.contains('show')) closeModal('modalRelease');
+    if ($modalClockIn.classList.contains('show')) closeModal('modalClockIn');
+    if ($modalLogin.classList.contains('show')) closeModal('modalLogin');
+  }
+});
+
+// ---- Login button & Enter key ----
+$('btnLogin').addEventListener('click', doLogin);
+$loginPwd.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+// ---- Render My Seat sidebar ----
+function renderMySeat() {
+  if (!userSeatId) {
+    $mySeatInfo.innerHTML = '<div class="empty">暂未选座</div>';
+    $quickActions.innerHTML = '<div class="empty">请先选座</div>';
+    return;
+  }
+  const seat = findSeat(userSeatId);
+  if (!seat) {
+    $mySeatInfo.innerHTML = '<div class="empty">暂未选座</div>';
+    $quickActions.innerHTML = '<div class="empty">请先选座</div>';
+    return;
+  }
+
+  // Seat info only
+  $mySeatInfo.innerHTML = `
+    <div class="seat-detail">
+      <div class="r"><span class="lbl">座位编号</span><span class="seat-badge">${seat.id}</span></div>
+      <div class="r"><span class="lbl">使用人</span><span class="val">${currentUser ? currentUser.name : '--'}</span></div>
+      <div class="r"><span class="lbl">楼层</span><span class="val">${seat.floor}F</span></div>
+      <div class="r"><span class="lbl">区域</span><span class="val">${seat.zoneLabel}</span></div>
+      <div class="r"><span class="lbl">座位号</span><span class="val">${seat.label}</span></div>
+    </div>
+  `;
+
+  // Actions only
+  const isAway = awayEndTime && awayEndTime > Date.now() / 1000;
+  let actionHtml = '';
+  if (!hasCheckedIn) {
+    actionHtml = `
+      <button class="btn-clockin" onclick="openClockIn()">打卡</button>
+      <button class="btn-release" onclick="handleClick('${seat.id}')">退座</button>
+    `;
+  } else if (isAway) {
+    const remain = Math.max(0, Math.floor(awayEndTime - Date.now() / 1000));
+    const m = Math.floor(remain / 60);
+    const s = remain % 60;
+    actionHtml = `
+      <div class="btn-actions">
+        <div class="away-countdown">暂离中 · 剩余 ${m}:${String(s).padStart(2,'0')}</div>
+        <button class="btn-return" onclick="doReturn()">返回</button>
+        <button class="btn-release" onclick="doSignOut()">签退</button>
+      </div>
+    `;
+  } else {
+    const awayDisabled = awayQuota <= 0;
+    actionHtml = `
+      <div class="btn-actions">
+        <button class="btn-away-act" onclick="doAway()"${awayDisabled ? ' disabled' : ''}>暂离${awayDisabled ? '（次数已用完）' : ''}</button>
+        <button class="btn-release" onclick="doSignOut()">签退</button>
+      </div>
+    `;
+  }
+  $quickActions.innerHTML = actionHtml;
+}
+
+// ---- Toast ----
+function toast(msg) {
+  const el = document.createElement('div');
+  el.className = 'toast'; el.textContent = msg;
+  $('toastContainer').appendChild(el);
+  setTimeout(() => el.remove(), 2300);
+}
+
+// ---- Init ----
+(function restoreState() {
+  // Restore checked-in state
+  if (localStorage.getItem('dcu_lib_checked_in')) {
+    hasCheckedIn = true;
+  }
+  // Restore away quota
+  const savedQuota = localStorage.getItem('dcu_lib_away_quota');
+  if (savedQuota !== null) {
+    awayQuota = parseInt(savedQuota, 10);
+  }
+  const savedAway = localStorage.getItem('dcu_lib_away_end');
+  if (savedAway) {
+    const end = parseInt(savedAway, 10);
+    const now = Math.floor(Date.now() / 1000);
+    if (end > now) {
+      awayEndTime = end;
+      startAwayTimer();
+    } else {
+      // Expired
+      localStorage.removeItem('dcu_lib_away_end');
+      if (!userSeatId) { hasCheckedIn = false; localStorage.removeItem('dcu_lib_checked_in'); }
+    }
+  }
+})();
+renderHeader();
+render();
+</script>
+</body>
+</html>
