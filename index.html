@@ -492,6 +492,12 @@ let awayEndTime = null;   // Unix timestamp (s) when away expires
 let awayTimer = null;     // interval handle for countdown & auto-release
 let hasCheckedIn = false; // whether user has confirmed arrival
 let awayQuota = 2; // remaining away count for current seat session
+let seatMap = {};
+const SEAT_MAP_KEY = 'dcu_lib_seat_map';
+(function(){
+  const saved = localStorage.getItem(SEAT_MAP_KEY);
+  if (saved) { try { seatMap = JSON.parse(saved); } catch(e){} }
+})();
 
 // ---- DOM shortcuts ----
 const $ = id => document.getElementById(id);
@@ -647,6 +653,7 @@ function doLogin() {
   renderHeader(); render();
 }
 function doLogout() {
+  const sid = userSeatId;
   currentUser = null;
   localStorage.removeItem('dcu_lib_user');
   clearAwayState();
@@ -654,8 +661,13 @@ function doLogout() {
   localStorage.removeItem('dcu_lib_checked_in');
   awayQuota = 2;
   localStorage.setItem('dcu_lib_away_quota', awayQuota);
-  if (userSeatId) { userSeatId = null; toast('已退出登录并释放座位'); }
-  else { toast('已退出登录'); }
+  if (sid) {
+    userSeatId = null;
+    delete seatMap[sid];
+    saveSeatMap();
+    bc.postMessage({ type: 'seat_released', seatId: sid });
+    toast('已退出登录并释放座位');
+  } else { toast('已退出登录'); }
   renderHeader(); render();
 }
 
@@ -683,9 +695,17 @@ function buildTabs() {
 }
 
 // ---- Effective status ----
+function saveSeatMap() {
+  localStorage.setItem(SEAT_MAP_KEY, JSON.stringify(seatMap));
+}
+
 function eff(s) {
   if (s.id === userSeatId) {
     return (awayEndTime && awayEndTime > Date.now() / 1000) ? 'away' : 'selected';
+  }
+  const remote = seatMap[s.id];
+  if (remote) {
+    return remote.away ? 'away' : 'selected';
   }
   return s.status;
 }
@@ -797,6 +817,9 @@ function confirmSelect() {
   userSeatId = pendingSeatId;
   awayQuota = 2;
   localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  seatMap[pendingSeatId] = { userId: currentUser.id, userName: currentUser.name, away: false };
+  saveSeatMap();
+  bc.postMessage({ type: 'seat_taken', seatId: pendingSeatId, userId: currentUser.id, userName: currentUser.name });
   toast('选座成功！请在 30 分钟内到馆签到');
   render();
 }
@@ -808,6 +831,9 @@ function confirmRelease() {
   userSeatId = null;
   awayQuota = 2;
   localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  delete seatMap[pendingSeatId];
+  saveSeatMap();
+  bc.postMessage({ type: 'seat_released', seatId: pendingSeatId });
   toast('退座成功，欢迎再次使用');
   render();
 }
@@ -840,23 +866,37 @@ function doAway() {
   awayEndTime = Math.floor(Date.now() / 1000) + 30 * 60; // 30 min
   localStorage.setItem('dcu_lib_away_end', awayEndTime);
   startAwayTimer();
+  if (seatMap[userSeatId]) {
+    seatMap[userSeatId].away = true;
+    saveSeatMap();
+    bc.postMessage({ type: 'seat_away', seatId: userSeatId });
+  }
   toast('已设为暂离，30 分钟后自动释放座位');
   render();
 }
 function doReturn() {
   if (!userSeatId) return;
   clearAwayState();
+  if (seatMap[userSeatId]) {
+    seatMap[userSeatId].away = false;
+    saveSeatMap();
+    bc.postMessage({ type: 'seat_return', seatId: userSeatId });
+  }
   toast('已返回座位');
   render();
 }
 function doSignOut() {
   if (!userSeatId) return;
+  const sid = userSeatId;
   clearAwayState();
   hasCheckedIn = false;
   localStorage.removeItem('dcu_lib_checked_in');
   userSeatId = null;
   awayQuota = 2;
   localStorage.setItem('dcu_lib_away_quota', awayQuota);
+  delete seatMap[sid];
+  saveSeatMap();
+  bc.postMessage({ type: 'seat_released', seatId: sid });
   toast('签退成功，欢迎再次使用');
   render();
 }
@@ -874,12 +914,16 @@ function startAwayTimer() {
     const now = Date.now() / 1000;
     if (!awayEndTime || now >= awayEndTime) {
       // Auto-release
+      const sid = userSeatId;
       hasCheckedIn = false;
       localStorage.removeItem('dcu_lib_checked_in');
       userSeatId = null;
       awayQuota = 2;
       localStorage.setItem('dcu_lib_away_quota', awayQuota);
       clearAwayState();
+      delete seatMap[sid];
+      saveSeatMap();
+      bc.postMessage({ type: 'seat_released', seatId: sid });
       toast('暂离超时，座位已自动释放');
       render();
       return;
@@ -954,7 +998,7 @@ function renderMySeat() {
       <div class="r"><span class="lbl">楼层</span><span class="val">${seat.floor}F</span></div>
       <div class="r"><span class="lbl">区域</span><span class="val">${seat.zoneLabel}</span></div>
       <div class="r"><span class="lbl">座位号</span><span class="val">${seat.label}</span></div>
-    </div>
+      </div>
   `;
 
   // Actions only
@@ -1021,6 +1065,40 @@ function toast(msg) {
     }
   }
 })();
+
+// ---- BroadcastChannel multi-tab sync ----
+const bc = new BroadcastChannel('dcu-lib-sync');
+bc.onmessage = (e) => {
+  const msg = e.data;
+  if (!msg || !msg.type) return;
+  switch (msg.type) {
+    case 'seat_taken':
+      seatMap[msg.seatId] = { userId: msg.userId, userName: msg.userName, away: false };
+      saveSeatMap();
+      refreshFloorView();
+      break;
+    case 'seat_released':
+      delete seatMap[msg.seatId];
+      saveSeatMap();
+      refreshFloorView();
+      break;
+    case 'seat_away':
+      if (seatMap[msg.seatId]) {
+        seatMap[msg.seatId].away = true;
+        saveSeatMap();
+        refreshFloorView();
+      }
+      break;
+    case 'seat_return':
+      if (seatMap[msg.seatId]) {
+        seatMap[msg.seatId].away = false;
+        saveSeatMap();
+        refreshFloorView();
+      }
+      break;
+  }
+};
+
 renderHeader();
 render();
 </script>
